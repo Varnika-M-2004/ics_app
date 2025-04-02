@@ -65,7 +65,7 @@ def embed_image(cover_img, secret_img):
     # Flatten and embed data
     flat_cover = cover_pixels.flatten()
     for i in range(len(secret_bin)):
-        flat_cover[i] = np.uint8((flat_cover[i] & ~1) | int(secret_bin[i]))
+        flat_cover[i] = ((flat_cover[i] & ~1) | int(secret_bin[i])) & 255
 
     print(f"Compressed secret size: {len(compressed_bytes)} bytes")
     print(f"Embedded {len(secret_bin)} bits into cover image.")
