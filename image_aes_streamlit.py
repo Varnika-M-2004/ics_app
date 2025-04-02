@@ -2,7 +2,7 @@ import streamlit as st
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.fernet import Fernet
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 import base64
 import numpy as np
@@ -63,15 +63,15 @@ def embed_image(cover_img, secret_img):
         return None
 
     # Flatten and embed data
-    flat_cover = cover_pixels.flatten().astype(np.uint8)  # Ensure uint8
-    
+    flat_cover = cover_pixels.flatten()
     for i in range(len(secret_bin)):
-        flat_cover[i] = np.clip((flat_cover[i] & ~1) | int(secret_bin[i]), 0, 255).astype(np.uint8)
-    
-    st.write(f"Compressed secret size: {len(compressed_bytes)} bytes")
-    st.write(f"Embedded {len(secret_bin)} bits into cover image.")
-    
+        flat_cover[i] = (flat_cover[i] & ~1) | int(secret_bin[i])
+
+    print(f"Compressed secret size: {len(compressed_bytes)} bytes")
+    print(f"Embedded {len(secret_bin)} bits into cover image.")
+
     return Image.fromarray(flat_cover.reshape(cover_pixels.shape))
+
 
 # Function to extract a hidden image
 def extract_image(cover_image):
@@ -107,6 +107,7 @@ def extract_image(cover_image):
         st.error(f"Extraction failed! Error: {e}")
         return None
 
+
 # Encrypt Image Function
 def encrypt_image(image_bytes, password):
     cipher = Fernet(derive_key(password))
@@ -125,6 +126,7 @@ def decrypt_image(encrypted_data, password):
         return decrypted_image, extracted_image
     except Exception:
         return None, None  # Indicate failure
+
 
 # Streamlit UI
 st.title("Image Steganography with Encryption & Password Protection")
@@ -147,8 +149,8 @@ if menu == "Encrypt Image":
             st.error(validation_error)
 
     if base_image and secret_image and password and not validation_error:
-        base_img = Image.open(io.BytesIO(base_image.getvalue())).convert("RGB")
-        secret_img = Image.open(io.BytesIO(secret_image.getvalue())).convert("RGB")
+        base_img = Image.open(base_image).convert("RGB")
+        secret_img = Image.open(secret_image).convert("RGB")
 
         embedded_img = embed_image(base_img, secret_img)
 
@@ -159,7 +161,7 @@ if menu == "Encrypt Image":
 
             st.success("Encryption successful!")
             st.image(embedded_img, caption="Stego Image with Hidden Data")
-            st.download_button("Download Encrypted File", io.BytesIO(encrypted_data), "encrypted_image.enc")
+            st.download_button("Download Encrypted File", encrypted_data, "encrypted_image.enc")
 
 elif menu == "Decrypt Image":
     if st.session_state.failed_attempts >= LOCKOUT_LIMIT:
@@ -181,7 +183,7 @@ elif menu == "Decrypt Image":
                     st.image(extracted_image, caption="Extracted Hidden Image")
                     extracted_img_bytes = io.BytesIO()
                     extracted_image.save(extracted_img_bytes, format="PNG")
-                    st.download_button("Download Extracted Image", io.BytesIO(extracted_img_bytes.getvalue()), "extracted_image.png")
+                    st.download_button("Download Extracted Image", extracted_img_bytes.getvalue(), "extracted_image.png")
 
                 st.session_state.failed_attempts = 0  # Reset on success
             else:
