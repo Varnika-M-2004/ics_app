@@ -66,8 +66,13 @@ def embed_image(cover_img, secret_img):
     flat_cover = cover_pixels.flatten().astype(np.uint8)  # Ensure uint8
     
     for i in range(len(secret_bin)):
-        new_value = (flat_cover[i] & ~1) | int(secret_bin[i])
-        flat_cover[i] = np.uint8(new_value)  # Force uint8 conversion
+    new_value = (flat_cover[i] & ~1) | int(secret_bin[i])
+
+    # Debugging print
+    if new_value < 0 or new_value > 255:
+        print(f"⚠️ WARNING: Index {i}, Before={flat_cover[i]}, After={new_value}")
+
+    flat_cover[i] = np.uint8(new_value)  # Force uint8 conversion
     
     print(f"Compressed secret size: {len(compressed_bytes)} bytes")
     print(f"Embedded {len(secret_bin)} bits into cover image.")
