@@ -38,23 +38,29 @@ def validate_password(password):
         return "Password must contain at least one special character (!@#$%^&* etc)."
     return None  # Password is valid
 
-# Function to embed an image inside another using LSB
-import streamlit as st
-import numpy as np
-import io
-import zlib
-import base64
-from PIL import Image
+# Function to compress images
+def compress_image(image, quality=40):
+    """Compresses the image to reduce size while maintaining quality."""
+    img_bytes_io = io.BytesIO()
+    image.save(img_bytes_io, format="JPEG", quality=quality)
+    return Image.open(img_bytes_io)
 
+# Function to embed an image inside another using LSB
 def embed_image(cover_img, secret_img):
-    cover_pixels = np.array(cover_img, dtype=np.int16)  # Changed to int16 for safe operations
+    # 🔹 Resize cover image to a fixed size
+    cover_img = cover_img.resize((512, 512))
+    
+    # 🔹 Compress the secret image
+    secret_img = compress_image(secret_img, quality=40)
+    
+    cover_pixels = np.array(cover_img, dtype=np.uint8)
     cover_capacity = cover_pixels.size * 3  
 
     # Convert secret image to bytes and compress
     secret_bytes_io = io.BytesIO()
     secret_img.save(secret_bytes_io, format="PNG")
     secret_bytes = secret_bytes_io.getvalue()
-    compressed_bytes = zlib.compress(secret_bytes)  # Compress before embedding
+    compressed_bytes = zlib.compress(secret_bytes)
 
     # Convert compressed bytes to Base64 and then binary
     secret_b64 = base64.b64encode(compressed_bytes).decode()
@@ -64,38 +70,18 @@ def embed_image(cover_img, secret_img):
     eof_marker = '1111111111111110'
     secret_bin += eof_marker
 
-    # Check if it fits in cover image
+    # Check if secret data fits in cover image
     if len(secret_bin) > cover_capacity:
         st.error("Secret image is too large! Resize and try again.")
         return None
 
-    # Flatten the cover image array
-    flat_cover = cover_pixels.flatten()  
-
-    # Debugging: Check min/max values before modifying
-    print(f"Before embedding: min={flat_cover.min()}, max={flat_cover.max()}")
+    # Flatten and embed data
+    flat_cover = cover_pixels.flatten()
 
     for i in range(len(secret_bin)):
-        old_value = flat_cover[i]
-        bit_to_embed = int(secret_bin[i])
+        flat_cover[i] = (flat_cover[i] & ~1) | int(secret_bin[i])  # Modify only LSB
 
-        # Embed the bit safely
-        new_value = (old_value & ~1) | bit_to_embed
-
-        # ✅ Ensure new value stays within uint8 range (0-255)
-        if new_value < 0 or new_value > 255:
-            print(f"Warning! Overflow at index {i}: {new_value}")
-            new_value = np.clip(new_value, 0, 255)  # Fix overflow
-
-        flat_cover[i] = new_value  # Assign safely
-
-    # Debugging: Check min/max values after modifying
-    print(f"After embedding: min={flat_cover.min()}, max={flat_cover.max()}")
-
-    # Convert back to image
-    return Image.fromarray(flat_cover.reshape(cover_pixels.shape).astype(np.uint8))
-
-
+    return Image.fromarray(flat_cover.reshape(cover_pixels.shape))
 
 # Function to extract a hidden image
 def extract_image(cover_image):
@@ -122,7 +108,7 @@ def extract_image(cover_image):
 
     try:
         compressed_bytes = base64.b64decode(extracted_b64)
-        extracted_bytes = zlib.decompress(compressed_bytes)  # Decompress data
+        extracted_bytes = zlib.decompress(compressed_bytes)
 
         extracted_image = Image.open(io.BytesIO(extracted_bytes))
         extracted_image.load()
@@ -130,7 +116,6 @@ def extract_image(cover_image):
     except Exception as e:
         st.error(f"Extraction failed! Error: {e}")
         return None
-
 
 # Encrypt Image Function
 def encrypt_image(image_bytes, password):
@@ -151,9 +136,8 @@ def decrypt_image(encrypted_data, password):
     except Exception:
         return None, None  # Indicate failure
 
-
 # Streamlit UI
-st.title("Image Steganography with Encryption & Password Protection")
+st.title("🔐 Image Steganography with Encryption & Password Protection")
 
 menu = st.sidebar.radio("Select an Option", ["Encrypt Image", "Decrypt Image"])
 
@@ -183,13 +167,13 @@ if menu == "Encrypt Image":
             embedded_img.save(image_bytes, format="PNG")
             encrypted_data = encrypt_image(image_bytes.getvalue(), password)
 
-            st.success("Encryption successful!")
+            st.success("✅ Encryption successful!")
             st.image(embedded_img, caption="Stego Image with Hidden Data")
-            st.download_button("Download Encrypted File", encrypted_data, "encrypted_image.enc")
+            st.download_button("📥 Download Encrypted File", encrypted_data, "encrypted_image.enc")
 
 elif menu == "Decrypt Image":
     if st.session_state.failed_attempts >= LOCKOUT_LIMIT:
-        st.error("Too many failed attempts! You are locked out.")
+        st.error("⛔ Too many failed attempts! You are locked out.")
     else:
         st.subheader("Upload Encrypted File")
         encrypted_file = st.file_uploader("Choose an Encrypted File", type=["enc"])
@@ -200,20 +184,20 @@ elif menu == "Decrypt Image":
             decrypted_image, extracted_image = decrypt_image(encrypted_data, password)
 
             if decrypted_image:
-                st.success("Decryption successful!")
+                st.success("✅ Decryption successful!")
                 st.image(decrypted_image, caption="Decrypted Cover Image")
 
                 if extracted_image:
                     st.image(extracted_image, caption="Extracted Hidden Image")
                     extracted_img_bytes = io.BytesIO()
                     extracted_image.save(extracted_img_bytes, format="PNG")
-                    st.download_button("Download Extracted Image", extracted_img_bytes.getvalue(), "extracted_image.png")
+                    st.download_button("📥 Download Extracted Image", extracted_img_bytes.getvalue(), "extracted_image.png")
 
                 st.session_state.failed_attempts = 0  # Reset on success
             else:
                 st.session_state.failed_attempts += 1
                 attempts_left = LOCKOUT_LIMIT - st.session_state.failed_attempts
                 if attempts_left > 0:
-                    st.error(f"Incorrect password! {attempts_left} attempts remaining.")
+                    st.error(f"❌ Incorrect password! {attempts_left} attempts remaining.")
                 else:
-                    st.error("Too many failed attempts! You are now locked out.")
+                    st.error("⛔ Too many failed attempts! You are now locked out.")
