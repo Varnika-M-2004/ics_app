@@ -40,7 +40,7 @@ def validate_password(password):
 
 # Function to embed an image inside another using LSB
 def embed_image(cover_img, secret_img):
-    cover_pixels = np.array(cover_img)
+    cover_pixels = np.array(cover_img, dtype=np.uint8)
     cover_capacity = cover_pixels.size * 3  
 
     # Convert secret image to bytes and compress
@@ -63,12 +63,13 @@ def embed_image(cover_img, secret_img):
         return None
 
     # Flatten and embed data
-    flat_cover = cover_pixels.flatten()
+    flat_cover = cover_pixels.flatten().astype(np.uint8)  # Ensure uint8
+    
     for i in range(len(secret_bin)):
-        flat_cover[i] = (flat_cover[i] & ~1) | int(secret_bin[i])
-
-    print(f"Compressed secret size: {len(compressed_bytes)} bytes")
-    print(f"Embedded {len(secret_bin)} bits into cover image.")
+        new_value = (flat_cover[i] & ~1) | int(secret_bin[i])
+    
+        # 🔥 Fix: Ensure value stays within uint8 range (0-255)
+        flat_cover[i] = np.uint8(new_value)
 
     return Image.fromarray(flat_cover.reshape(cover_pixels.shape))
 
