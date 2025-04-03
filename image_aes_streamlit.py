@@ -144,9 +144,56 @@ def decrypt_image(encrypted_data, password):
 
 
 # Streamlit UI
-st.title("Image Steganography with Encryption & Password Protection")
+# Streamlit UI with Styling
+st.markdown(
+    """
+    <style>
+        /* Set background color */
+        body {
+            background-color: #f5f7fa;
+        }
 
-menu = st.sidebar.radio("Select an Option", ["Encrypt Image", "Decrypt Image"])
+        /* Centered and styled title */
+        .title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50; /* Dark blue-grey */
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Sidebar styling */
+        .stSidebar {
+            background-color: #ecf0f1;
+        }
+
+        /* General text color */
+        .stText {
+            color: #34495e; 
+        }
+
+        /* Button styling */
+        .stButton>button {
+            background-color: #2980b9;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .stButton>button:hover {
+            background-color: #1f618d;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Title with new name
+st.markdown('<h1 class="title">StegoCipherX: Secure Image Encryption & Steganography</h1>', unsafe_allow_html=True)
+
+# Sidebar menu
+menu = st.sidebar.radio("🔹 Select an Option", ["Encrypt Image", "Decrypt Image"])
 
 if menu == "Encrypt Image":
     st.subheader("Upload a Cover Image")
