@@ -67,9 +67,9 @@ def embed_image(cover_img, secret_img):
     
     for i in range(len(secret_bin)):
         new_value = (flat_cover[i] & ~1) | int(secret_bin[i])
-    
-        # 🔥 Fix: Ensure value stays within uint8 range (0-255)
-        flat_cover[i] = np.uint8(new_value)
+        
+        # ✅ Alternative Fix: Ensure values stay within 0-255
+        flat_cover[i] = np.clip(new_value, 0, 255)
 
     return Image.fromarray(flat_cover.reshape(cover_pixels.shape))
 
