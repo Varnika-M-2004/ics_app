@@ -75,7 +75,7 @@ def embed_image(cover_img, secret_img):
         # Embed the bit safely
         new_value = (old_value & ~1) | bit_to_embed
 
-        # ✅ Ensure new value stays within uint8 range (0-255)
+        # Ensure new value stays within uint8 range (0-255)
         if new_value < 0 or new_value > 255:
             print(f"Warning! Overflow at index {i}: {new_value}")
             new_value = np.clip(new_value, 0, 255)  # Fix overflow
@@ -143,7 +143,7 @@ def decrypt_image(encrypted_data, password):
         return None, None  # Indicate failure
 
 
-# Streamlit UI
+# Streamlit UI with Styling
 # Streamlit UI with Styling
 st.markdown(
     """
@@ -165,13 +165,14 @@ st.markdown(
         }
 
         /* Sidebar styling */
-        .stSidebar {
-            background-color: #ecf0f1;
+        [data-testid="stSidebar"] {
+            background-color: #2c3e50 !important; /* Dark blue-grey */
+            color: white !important;
         }
 
         /* General text color */
         .stText {
-            color: #34495e; 
+            color: #ecf0f1; /* Light grey */
         }
 
         /* Button styling */
@@ -192,7 +193,7 @@ st.markdown(
 # Title with new name
 st.markdown('<h1 class="title">StegoCipherX: Secure Image Encryption & Steganography</h1>', unsafe_allow_html=True)
 
-# Sidebar menu
+# Sidebar menu (Ensuring it remains dark)
 menu = st.sidebar.radio("🔹 Select an Option", ["Encrypt Image", "Decrypt Image"])
 
 if menu == "Encrypt Image":
