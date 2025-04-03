@@ -39,8 +39,15 @@ def validate_password(password):
     return None  # Password is valid
 
 # Function to embed an image inside another using LSB
+import streamlit as st
+import numpy as np
+import io
+import zlib
+import base64
+from PIL import Image
+
 def embed_image(cover_img, secret_img):
-    cover_pixels = np.array(cover_img, dtype=np.uint8)
+    cover_pixels = np.array(cover_img, dtype=np.int16)  # Changed to int16 for safe operations
     cover_capacity = cover_pixels.size * 3  
 
     # Convert secret image to bytes and compress
@@ -62,14 +69,32 @@ def embed_image(cover_img, secret_img):
         st.error("Secret image is too large! Resize and try again.")
         return None
 
-    # Flatten and embed data
-    flat_cover = cover_pixels.flatten().astype(np.uint8)  # Ensure uint8
-    
-    for i in range(len(secret_bin)):
-        # 🔥 Proper Fix: Ensure all operations stay within uint8 range
-        flat_cover[i] = np.uint8((flat_cover[i] & ~1) | int(secret_bin[i]))
+    # Flatten the cover image array
+    flat_cover = cover_pixels.flatten()  
 
-    return Image.fromarray(flat_cover.reshape(cover_pixels.shape))
+    # Debugging: Check min/max values before modifying
+    print(f"Before embedding: min={flat_cover.min()}, max={flat_cover.max()}")
+
+    for i in range(len(secret_bin)):
+        old_value = flat_cover[i]
+        bit_to_embed = int(secret_bin[i])
+
+        # Embed the bit safely
+        new_value = (old_value & ~1) | bit_to_embed
+
+        # ✅ Ensure new value stays within uint8 range (0-255)
+        if new_value < 0 or new_value > 255:
+            print(f"Warning! Overflow at index {i}: {new_value}")
+            new_value = np.clip(new_value, 0, 255)  # Fix overflow
+
+        flat_cover[i] = new_value  # Assign safely
+
+    # Debugging: Check min/max values after modifying
+    print(f"After embedding: min={flat_cover.min()}, max={flat_cover.max()}")
+
+    # Convert back to image
+    return Image.fromarray(flat_cover.reshape(cover_pixels.shape).astype(np.uint8))
+
 
 
 # Function to extract a hidden image
